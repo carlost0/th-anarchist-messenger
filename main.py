@@ -1,93 +1,105 @@
 import socket
 import threading
-import json
+import json5
+import os
 import time
+from cryptography.fernet import Fernet
 
-def handle_client(connection, client):
+def generate_encryption_key():
+    key = Fernet.generate_key()
+    with open('secret.key', 'xb') as f:
+        f.write(key)
+    os.chmod('secret.key', 0o600)
+
+def encrypt_message(message, key):
+    fernet = Fernet(key)
+    return fernet.encrypt(message.encode())
+
+def decrypt_message(token, key):
+    fernet = Fernet(key)
+    return fernet.decrypt(token).decode()
+
+def handle_client(connection, client, key):
     try:
         while True:
             data = connection.recv(4064)
             if not data:
                 break
-            formatted_data = data.decode()
-            print(formatted_data)
+            decrypted_data = decrypt_message(data, key)
+            print(decrypted_data)
 
-            if formatted_data.strip() == ':q':
+            if decrypted_data.strip() == ':q':
                 break
     finally:
-        #print(f"Connection with {client} closed.")
         connection.close()
 
-def server(IP, PORT):
+def server(IP, PORT, key):
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = (IP, PORT)
     tcp_socket.bind(server_address)
     tcp_socket.listen()
-
-    #print(f"Server listening on {IP}:{PORT}")
     
     while True:
-        #print("Waiting for connection...")
         connection, client = tcp_socket.accept()
-        # Handle each client in a new thread
-        client_thread = threading.Thread(target=handle_client, args=(connection, client))
+        client_thread = threading.Thread(target=handle_client, args=(connection, client, key))
         client_thread.daemon = True
         client_thread.start()
 
-
-def client(IP, PORT, message):
-    # Create a connection to the server application on port 81
+def client(IP, PORT, data):
     tcp_socket = socket.create_connection((IP, PORT))
- 
     try:
-        data = str.encode(message)
         tcp_socket.sendall(data)
- 
     finally:
-        if message == ':q':
-            print("quitting")
-            tcp_socket.close()
+        tcp_socket.close()
 
 def get_data():
     with open('config.json', 'r') as file:
-        config = json.load(file)
- 
+        config = json5.load(file)
     username = config['username']
-
-    sender_ip = config['sender']['IP']
-    sender_port = config['sender']['PORT']
-
     reciever_ip = config['reciever']['IP']
     reciever_port = config['reciever']['PORT']
-
-    data = {
-            'user': username,
-
-            'sender': {
-                'IP': sender_ip,
-                'PORT': sender_port
-            },
-
-            'reciever': {
-                'IP': reciever_ip,
-                'PORT': reciever_port
-            },
+    return {
+        'user': username,
+        'reciever': {
+            'IP': reciever_ip,
+            'PORT': reciever_port
+        }
     }
 
-    return data
-
 if __name__ == "__main__":
-    
+    if not os.path.exists('secret.key'):
+        print("Generating key...")
+        generate_encryption_key()
+
+    with open('secret.key', 'rb') as secret:
+        key = secret.read()
+
+    reciever_name = input('Enter name of receiver: ')
+    with open(f'contacts/{reciever_name}.json', 'r') as file:
+        reciever = json5.load(file)
+
     data = get_data()
 
-    server_thread = threading.Thread(target=server, args=(data['reciever']['IP'], data['reciever']['PORT']))
+    server_thread = threading.Thread(
+        target=server,
+        args=(data['reciever']['IP'], data['reciever']['PORT'], reciever['KEY'])
+    )
+    server_thread.daemon = True
     server_thread.start()
 
     time.sleep(1)
-    #client = threading.Thread(target=client, args=(data['sender']['IP'], data['sender']['PORT'], data['message']))
+
     while True:
-        client_thread = threading.Thread(target=client, args=(data['sender']['IP'], data['sender']['PORT'], f'<{data['user']}>{input()}'))
+        user_input = input()
+        message = f"<{data['user']}>{user_input}"
+        encrypted_message = encrypt_message(message, key)
+
+        client_thread = threading.Thread(
+            target=client,
+            args=(reciever['IP'], reciever['PORT'], encrypted_message)
+        )
         client_thread.start()
         client_thread.join()
 
-    server:thread.join()
+        if user_input.strip() == ":q":
+            break

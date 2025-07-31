@@ -1,0 +1,10 @@
+// Contact template
+
+{
+"username": "carlost0",// Contact's username
+
+"IP": "127.0.0.1", // Contact's IP address
+"PORT": 1500, // Port on which contact's machine is listening
+
+"KEY": "eYTLb7a9qsbBXQ8Dw83F5o8qtEKH4kThApEjIrqK0I8=", // Contact's private key (found in contact's "secret.key" file)
+}
