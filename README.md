@@ -1,2 +1,2 @@
-# th-anarchist-messenger
+# the-anarchist-messenger
 decentralized messenger
