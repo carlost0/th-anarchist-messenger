@@ -1,5 +1,8 @@
 venv/
 user_2/
+contacts/*
+
+!contacts/template.json
 
 secret.key
 config.json
