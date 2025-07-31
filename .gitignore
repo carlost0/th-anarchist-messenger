@@ -1,5 +1,6 @@
 venv/
 user_2/
+contacts/*
 
 !contacts/template.json
 
