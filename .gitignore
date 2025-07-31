@@ -5,4 +5,4 @@ contacts/*
 !contacts/template.json
 
 secret.key
-config.json
+
