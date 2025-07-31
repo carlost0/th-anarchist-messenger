@@ -7,9 +7,15 @@ from cryptography.fernet import Fernet
 
 def generate_encryption_key():
     key = Fernet.generate_key()
-    with open('secret.key', 'xb') as f:
-        f.write(key)
-    os.chmod('secret.key', 0o600)
+    ans = input('Do you know your key? (y/N): ')
+
+    y = 'y'
+
+    if ans != y.upper():
+        print(f'Your key is: {key.decode()}')
+        print(f'Add this: export CHAT_SECRET_KEY="{key.decode()}" to your shell config and restart your terminal.')
+    else:
+        print('Make sure: export CHAT_SECRET_KEY="*your_key*" is in your shell config')
 
 def encrypt_message(message, key):
     fernet = Fernet(key)
@@ -53,7 +59,7 @@ def client(IP, PORT, data):
         tcp_socket.close()
 
 def get_data():
-    with open('config.json', 'r') as file:
+    with open('../config/config.json', 'r') as file:
         config = json5.load(file)
     username = config['username']
     reciever_ip = config['reciever']['IP']
@@ -67,15 +73,12 @@ def get_data():
     }
 
 if __name__ == "__main__":
-    if not os.path.exists('secret.key'):
-        print("Generating key...")
-        generate_encryption_key()
+    generate_encryption_key()
 
-    with open('secret.key', 'rb') as secret:
-        key = secret.read()
+    key = os.environ.get("CHAT_SECRET_KEY")
 
     reciever_name = input('Enter name of receiver: ')
-    with open(f'contacts/{reciever_name}.json', 'r') as file:
+    with open(f'../contacts/{reciever_name}.json', 'r') as file:
         reciever = json5.load(file)
 
     data = get_data()
