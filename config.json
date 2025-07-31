@@ -1,0 +1,11 @@
+{
+    "username": "Marx",
+    "sender": {
+        "IP": "127.0.0.1",
+        "PORT": 1501
+    },
+    "reciever": {
+        "IP": "127.0.0.1",
+        "PORT": 1500
+    }
+}
