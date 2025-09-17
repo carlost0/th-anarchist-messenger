@@ -1,8 +1,10 @@
 import socket
+import ssl
 import threading
 import json5
 import os
 import time
+
 from cryptography.fernet import Fernet
 
 def generate_encryption_key():
@@ -25,38 +27,47 @@ def decrypt_message(token, key):
     fernet = Fernet(key)
     return fernet.decrypt(token).decode()
 
-def handle_client(connection, client, key):
-    try:
-        while True:
-            data = connection.recv(4064)
-            if not data:
-                break
-            decrypted_data = decrypt_message(data, key)
-            print(decrypted_data)
-
-            if decrypted_data.strip() == ':q':
-                break
-    finally:
-        connection.close()
+def handle_client(connection, client, key, context):
+    while True:
+        with context.wrap_socket(conn, server_side=True) as tls_connection:
+            data = tsl_connection.recv(4064).decode()
 
 def server(IP, PORT, key):
-    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_address = (IP, PORT)
-    tcp_socket.bind(server_address)
-    tcp_socket.listen()
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile="../config/cert.pem", keyfile="../config/key.pem")
+
+    while True:
+        try:
+            tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_address = (IP, PORT)
+            tcp_socket.bind(server_address)
+            tcp_socket.listen()
+        except:
+            print("Error when trying to build connection with subject, perhaps theire not online or don't exist")
+            ans = input('Try again? (Y/n) ')
+            y = 'y'
+            if ans != y.upper():
+                break
     
     while True:
-        connection, client = tcp_socket.accept()
-        client_thread = threading.Thread(target=handle_client, args=(connection, client, key))
-        client_thread.daemon = True
-        client_thread.start()
+        try:
+            connection, client = tcp_socket.accept()
+            client_thread = threading.Thread(target=handle_client, args=(context, connection, client, key))
+            client_thread.daemon = True
+            client_thread.start()
+        except:
+            print('Something went wrong')
+            ans = input('Try again? (Y/n) ')
+            y = 'y'
+            if ans != y.upper():
+                break
 
 def client(IP, PORT, data):
-    tcp_socket = socket.create_connection((IP, PORT))
-    try:
-        tcp_socket.sendall(data)
-    finally:
-        tcp_socket.close()
+    context = ssl.create_default_context()
+    context.load_verify_location("../config/cert.pem")
+    with socket.create_connection((IP, PORT)) as sock:
+        with context.wrap_socket(sock, server_hostname=IP) as tls_sock:
+            tls_sock.sendall(data)
 
 def get_data():
     with open('../config/config.json', 'r') as file:
@@ -72,7 +83,7 @@ def get_data():
         }
     }
 
-if __name__ == "__main__":
+def main(): 
     generate_encryption_key()
 
     key = os.environ.get("CHAT_SECRET_KEY")
@@ -106,3 +117,6 @@ if __name__ == "__main__":
 
         if user_input.strip() == ":q":
             break
+
+if __name__ == "__main__":
+    main()

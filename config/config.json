@@ -3,5 +3,5 @@
 {
     "username": "pepe", // Your username
     "IP": "127.0.0.1", // Server IP
-    "PORT": 1600 // Server port
+    "PORT": 1600 // Server listening port
 }
