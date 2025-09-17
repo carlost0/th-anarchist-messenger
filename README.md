@@ -1,4 +1,4 @@
-#The Anarchist Messenger
+#The Anarchist Messenger#
 
 -**Decentralized**: each user runs their own server
 
